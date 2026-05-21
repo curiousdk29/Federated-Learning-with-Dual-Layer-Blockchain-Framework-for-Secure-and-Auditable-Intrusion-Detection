@@ -1,0 +1,6 @@
+# Ignore large binary updates
+*.bin
+
+# Security: Ignore private keys and credentials folder
+*.pem
+credentials/

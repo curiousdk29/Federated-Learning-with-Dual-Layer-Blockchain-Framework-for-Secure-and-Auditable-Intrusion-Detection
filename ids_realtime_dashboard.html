@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDS · Real-Time Detection Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080c12;--bg2:#0d1320;--bg3:#111827;
+  --border:#1e2d42;--border2:#243447;
+  --text:#cdd8e8;--text2:#6b8099;--text3:#3d5166;
+  --accent:#3b82f6;--accent2:#1d4ed8;
+  --red:#ef4444;--red3:#fca5a5;
+  --green:#22c55e;--green3:#86efac;
+  --amber:#f59e0b;--amber3:#fcd34d;
+  --orange:#f97316;--purple:#a855f7;--cyan:#06b6d4;
+  --mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.025) 2px,rgba(0,0,0,.025) 4px)}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,var(--bg2),#0a1628);border-bottom:1px solid var(--border);
+  padding:1.1rem 2rem;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100}
+.logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--purple));
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  box-shadow:0 0 18px rgba(59,130,246,.4);margin-right:12px}
+.header-left{display:flex;align-items:center}
+.header-title{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.header-sub{font-size:10px;color:var(--text2);font-family:var(--mono);margin-top:1px;letter-spacing:.06em}
+.header-right{display:flex;align-items:center;gap:10px}
+.status-pill{display:flex;align-items:center;gap:7px;padding:4px 12px;border-radius:20px;
+  font-size:10px;font-family:var(--mono);border:1px solid var(--border2);background:var(--bg3);color:var(--text2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot.err{background:var(--red);box-shadow:0 0 8px var(--red)}
+.dot.pend{background:var(--amber);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* LAYOUT */
+.main{padding:1.5rem 2rem;max-width:1600px;margin:0 auto}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.4rem}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .2s}
+.metric:hover{border-color:var(--border2)}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:.7}
+.metric:nth-child(1)::before{background:linear-gradient(90deg,var(--accent),var(--purple))}
+.metric:nth-child(2)::before{background:linear-gradient(90deg,var(--red),var(--orange))}
+.metric:nth-child(3)::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.metric:nth-child(4)::before{background:linear-gradient(90deg,var(--amber),var(--orange))}
+.metric-label{font-size:10px;font-family:var(--mono);color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.metric-val{font-size:30px;font-weight:800;color:#fff;line-height:1;font-family:var(--mono)}
+.metric-val.blue{color:var(--accent)}.metric-val.red{color:var(--red)}
+.metric-val.green{color:var(--green)}.metric-val.amber{color:var(--amber)}
+.metric-sub{font-size:10px;color:var(--text3);margin-top:4px;font-family:var(--mono)}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:1.2rem 1.4rem;margin-bottom:1.2rem}
+.card-title{font-size:10px;font-family:var(--mono);color:var(--text2);text-transform:uppercase;
+  letter-spacing:.12em;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:12px;border-radius:2px;flex-shrink:0;background:var(--accent)}
+.card-title.cyan::before{background:var(--cyan)}
+
+/* INPUTS */
+input[type=text],input[type=number],select{
+  height:33px;border:1px solid var(--border2);border-radius:7px;padding:0 10px;
+  font-size:12px;font-family:var(--mono);background:var(--bg3);color:var(--text);outline:none;
+  transition:border-color .15s,box-shadow .15s}
+input[type=text]:focus,input[type=number]:focus,select:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+input[type=text]{min-width:250px}
+input[type=number]{width:74px}
+select{min-width:180px;cursor:pointer}
+select option{background:var(--bg3)}
+.live-status{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:7px;
+  border:1px solid var(--border2);background:var(--bg3);font-size:11px;font-family:var(--mono);color:var(--text2)}
+.live-hint{font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:5px;line-height:1.6}
+
+/* BUTTONS */
+button{height:33px;padding:0 16px;border:1px solid var(--border2);border-radius:7px;
+  font-size:12px;font-weight:700;font-family:var(--sans);background:var(--bg3);color:var(--text);
+  cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+button:hover{background:var(--border);color:#fff}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.primary:hover{background:var(--accent2);box-shadow:0 4px 16px rgba(59,130,246,.3)}
+button.stop-btn{background:rgba(239,68,68,.1);color:var(--red3);border-color:rgba(239,68,68,.25)}
+button.stop-btn:hover{background:rgba(239,68,68,.2);border-color:var(--red)}
+button:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* PROGRESS */
+.progress-wrap{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:12px}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:2px;transition:width .3s;width:0}
+
+/* CONFIG LAYOUT */
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.config-group{display:flex;flex-direction:column;gap:8px}
+.config-label{font-size:10px;font-family:var(--mono);color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}
+.input-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* FEATURE PANEL */
+.feature-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:1.2rem;overflow:hidden}
+.feature-panel-header{padding:.9rem 1.4rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.feature-panel-title{font-size:10px;font-family:var(--mono);color:var(--text2);text-transform:uppercase;
+  letter-spacing:.12em;display:flex;align-items:center;gap:8px}
+.feature-panel-title::before{content:'';width:3px;height:12px;background:var(--cyan);border-radius:2px;flex-shrink:0}
+.feat-sample-badge{display:flex;align-items:center;gap:10px;font-size:11px;font-family:var(--mono)}
+.feat-label-tag{padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;font-family:var(--mono)}
+.feat-label-tag.attack{background:rgba(239,68,68,.15);color:var(--red3);border:1px solid rgba(239,68,68,.25)}
+.feat-label-tag.benign{background:rgba(34,197,94,.1);color:var(--green3);border:1px solid rgba(34,197,94,.2)}
+.feature-grid{display:grid;grid-template-columns:repeat(6,1fr);max-height:280px;overflow-y:auto}
+.feature-grid::-webkit-scrollbar{width:4px}
+.feature-grid::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.feature-item{padding:8px 10px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+  transition:background .12s;cursor:default}
+.feature-item:hover{background:rgba(59,130,246,.05)}
+.feature-item:nth-child(6n){border-right:none}
+.feat-idx{font-size:8px;font-family:var(--mono);color:var(--text3);margin-bottom:1px}
+.feat-name{font-size:9px;font-family:var(--mono);color:var(--text2);margin-bottom:4px;line-height:1.3;min-height:22px;word-break:break-word}
+.feat-val{font-size:12px;font-family:var(--mono);color:#fff;font-weight:700}
+.feat-val.hi{color:var(--cyan)}
+.feat-bar{height:2px;background:var(--bg3);border-radius:1px;margin-top:4px;overflow:hidden}
+.feat-bar-inner{height:100%;border-radius:1px;transition:width .4s ease}
+.feat-empty{display:flex;align-items:center;justify-content:center;padding:2.5rem;
+  color:var(--text3);font-size:12px;font-family:var(--mono);border-top:1px solid var(--border)}
+
+/* SPLIT + TABLES */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.log-wrap{max-height:360px;overflow-y:auto}
+.log-wrap::-webkit-scrollbar{width:4px}
+.log-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead{position:sticky;top:0;z-index:1}
+thead th{text-align:left;padding:7px 10px;font-size:9px;font-family:var(--mono);color:var(--text3);
+  border-bottom:1px solid var(--border);font-weight:500;letter-spacing:.1em;text-transform:uppercase;background:var(--bg2)}
+tbody tr{border-bottom:1px solid rgba(30,45,66,.4);transition:background .1s}
+tbody tr:hover{background:rgba(59,130,246,.03)}
+tbody td{padding:7px 10px;vertical-align:middle;font-family:var(--mono)}
+.no-data{text-align:center;color:var(--text3);font-size:12px;padding:2.5rem 0;font-family:var(--mono)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;font-family:var(--mono);letter-spacing:.03em}
+.badge.attack{background:rgba(239,68,68,.12);color:var(--red3);border:1px solid rgba(239,68,68,.2)}
+.badge.benign{background:rgba(34,197,94,.09);color:var(--green3);border:1px solid rgba(34,197,94,.18)}
+.badge.sev-critical{background:rgba(239,68,68,.14);color:#fca5a5;border:1px solid rgba(239,68,68,.28)}
+.badge.sev-high{background:rgba(249,115,22,.12);color:#fdba74;border:1px solid rgba(249,115,22,.22)}
+.badge.sev-medium{background:rgba(245,158,11,.1);color:var(--amber3);border:1px solid rgba(245,158,11,.18)}
+.badge.sev-low{background:rgba(34,197,94,.09);color:var(--green3);border:1px solid rgba(34,197,94,.18)}
+.badge.sev-none{background:rgba(107,128,153,.08);color:var(--text2);border:1px solid var(--border)}
+
+/* SCORE BAR */
+.score-wrap{display:flex;align-items:center;gap:6px}
+.score-bg{width:54px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;flex-shrink:0}
+.score-fill{height:100%;border-radius:2px;transition:width .3s}
+.score-num{font-size:10px;color:var(--text2);width:38px}
+
+/* MISC */
+.attack-type{font-size:10px;color:var(--purple);font-weight:700;font-family:var(--mono);letter-spacing:.03em}
+.match-ok{color:var(--green);font-size:13px}.match-fail{color:var(--red);font-size:13px}
+.hash-cell{font-size:9px;color:var(--text3);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.hash-cell:hover{color:var(--accent)}
+@keyframes rowIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.row-new{animation:rowIn .2s ease}
+
+@media(max-width:1100px){.feature-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:768px){.metrics{grid-template-columns:1fr 1fr}.split{grid-template-columns:1fr}.config-grid{grid-template-columns:1fr}.feature-grid{grid-template-columns:repeat(3,1fr)}.main{padding:1rem}.header{padding:1rem}}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo">🛡</div>
+    <div>
+      <div class="header-title">IDS Detection Dashboard</div>
+      <div class="header-sub">FEDERATED CNN &nbsp;·&nbsp; GANACHE BLOCKCHAIN &nbsp;·&nbsp; CIC-IDS2017</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button id="btn-ping" style="font-size:11px;height:30px;padding:0 12px">PING SERVER</button>
+    <div class="status-pill">
+      <span class="dot" id="conn-dot"></span>
+      <span id="conn-text" style="font-size:10px">NOT CHECKED</span>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- METRICS -->
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Samples Tested</div>
+      <div class="metric-val blue" id="m-total">0</div>
+      <div class="metric-sub" id="m-total-sub">awaiting simulation</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Attacks Detected</div>
+      <div class="metric-val red" id="m-attacks">0</div>
+      <div class="metric-sub" id="m-attack-sub">— detection rate</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Benign Traffic</div>
+      <div class="metric-val green" id="m-benign">0</div>
+      <div class="metric-sub" id="m-benign-sub">— of total</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Blockchain Logs</div>
+      <div class="metric-val amber" id="m-bc">0</div>
+      <div class="metric-sub">immutable records on chain</div>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="card">
+    <div class="card-title">Simulation Configuration</div>
+    <div class="config-grid">
+      <div class="config-group">
+        <div class="config-label">Flask API Endpoint</div>
+        <div class="input-row">
+          <input type="text" id="api-url" value="http://172.x.x.x:5001/predict" placeholder="http://WSL_IP:5001/predict" style="min-width:300px">
+        </div>
+        <div style="margin-top:10px">
+          <div class="config-label" style="margin-bottom:6px">Live Remote Listener</div>
+          <div class="input-row">
+            <button id="btn-listen" class="primary">📡 Start Listening</button>
+            <button id="btn-listen-stop" class="stop-btn" disabled>■ Stop</button>
+          </div>
+          <div class="live-hint" id="live-hint">
+            From the remote device, POST samples to <code style="color:var(--accent)">/push_sample</code> on the Flask server.<br>
+            This dashboard polls and processes them automatically in real time.
+          </div>
+          <div class="input-row" style="margin-top:8px">
+            <span class="live-status"><span class="dot" id="live-dot"></span><span id="live-text">NOT LISTENING</span></span>
+            <span style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-left:10px">Poll every</span>
+            <input type="number" id="poll-inp" value="1500" min="500" max="10000" style="width:74px">
+            <span style="font-size:11px;font-family:var(--mono);color:var(--text3)">ms</span>
+          </div>
+        </div>
+      </div>
+      <div class="config-group">
+        <div class="config-label">Processing Controls</div>
+        <div class="input-row" style="margin-top:6px">
+          <span style="font-size:11px;font-family:var(--mono);color:var(--text2)">Delay ms</span>
+          <input type="number" id="delay-inp" value="700" min="200" max="5000">
+        </div>
+        <div class="input-row" style="margin-top:10px">
+          <button class="stop-btn" id="btn-stop" disabled>■ Stop Processing</button>
+        </div>
+      </div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="prog"></div></div>
+  </div>
+
+  <!-- FEATURE INSPECTOR -->
+  <div class="feature-panel">
+    <div class="feature-panel-header">
+      <div class="feature-panel-title">Live Feature Inspector &nbsp;— &nbsp;72 Network Flow Features</div>
+      <div class="feat-sample-badge" id="feat-info">
+        <span style="color:var(--text3);font-family:var(--mono);font-size:11px">Run simulation to inspect features</span>
+      </div>
+    </div>
+    <div id="feature-grid-wrap">
+      <div class="feat-empty">Each sample's 72 network flow features will appear here as they are fed into the model</div>
+    </div>
+  </div>
+
+  <!-- LOGS -->
+  <div class="split">
+    <div class="card">
+      <div class="card-title">Live Detection Log</div>
+      <div class="log-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Attack Type</th><th>Prediction</th>
+            <th>Threat Score</th><th>Confidence</th><th>Match</th>
+          </tr></thead>
+          <tbody id="det-tbody">
+            <tr><td colspan="6" class="no-data">Awaiting simulation...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Blockchain Transaction Log</div>
+      <div class="log-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Attack Type</th><th>Severity</th><th>Time</th><th>Tx Hash</th>
+          </tr></thead>
+          <tbody id="bc-tbody">
+            <tr><td colspan="5" class="no-data">No blockchain transactions yet...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const FEATURE_NAMES=[
+  'Destination Port','Flow Duration','Total Fwd Packets','Total Backward Packets',
+  'Total Length of Fwd Packets','Total Length of Bwd Packets',
+  'Fwd Packet Length Max','Fwd Packet Length Min','Fwd Packet Length Mean','Fwd Packet Length Std',
+  'Bwd Packet Length Max','Bwd Packet Length Min','Bwd Packet Length Mean','Bwd Packet Length Std',
+  'Flow Bytes/s','Flow Packets/s',
+  'Flow IAT Mean','Flow IAT Std','Flow IAT Max','Flow IAT Min',
+  'Fwd IAT Total','Fwd IAT Mean','Fwd IAT Std','Fwd IAT Max','Fwd IAT Min',
+  'Bwd IAT Total','Bwd IAT Mean','Bwd IAT Std','Bwd IAT Max','Bwd IAT Min',
+  'Fwd PSH Flags','Bwd PSH Flags','Fwd URG Flags','Bwd URG Flags',
+  'Fwd Header Length','Bwd Header Length','Fwd Packets/s','Bwd Packets/s',
+  'Min Packet Length','Max Packet Length','Packet Length Mean','Packet Length Std','Packet Length Variance',
+  'FIN Flag Count','SYN Flag Count','RST Flag Count','PSH Flag Count','ACK Flag Count',
+  'URG Flag Count','CWE Flag Count','ECE Flag Count',
+  'Down/Up Ratio','Average Packet Size','Avg Fwd Segment Size','Avg Bwd Segment Size',
+  'Fwd Header Length.1','Fwd Avg Bytes/Bulk','Fwd Avg Packets/Bulk','Fwd Avg Bulk Rate',
+  'Bwd Avg Bytes/Bulk','Bwd Avg Packets/Bulk','Bwd Avg Bulk Rate',
+  'Subflow Fwd Packets','Subflow Fwd Bytes','Subflow Bwd Packets','Subflow Bwd Bytes',
+  'Init_Win_bytes_forward','Init_Win_bytes_backward','act_data_pkt_fwd','min_seg_size_forward',
+  'Active Mean','Active Std'
+];
+
+const SEVERITY_MAP={
+  'DDOS':'CRITICAL','DOS HULK':'CRITICAL','BOT':'CRITICAL','INFILTRATION':'CRITICAL','HEARTBLEED':'CRITICAL',
+  'DOS GOLDENEYE':'HIGH','DOS SLOWLORIS':'HIGH','DOS SLOWHTTPTEST':'HIGH',
+  'WEB ATTACK \uFFFD SQL INJECTION':'HIGH','WEB ATTACK - SQL INJECTION':'HIGH','WEB ATTACK \u2013 SQL INJECTION':'HIGH',
+  'FTP-PATATOR':'MEDIUM','SSH-PATATOR':'MEDIUM',
+  'WEB ATTACK \uFFFD BRUTE FORCE':'MEDIUM','WEB ATTACK - BRUTE FORCE':'MEDIUM','WEB ATTACK \u2013 BRUTE FORCE':'MEDIUM',
+  'WEB ATTACK \uFFFD XSS':'MEDIUM','WEB ATTACK - XSS':'MEDIUM','WEB ATTACK \u2013 XSS':'MEDIUM',
+  'PORTSCAN':'LOW'
+};
+// Normalize attack name: replace any dash/bullet variant to match SEVERITY_MAP keys
+function normLabel(lbl){
+  if(!lbl)return'UNKNOWN';
+  return lbl.toUpperCase().replace(/[\u2013\u2014\u2012\u00B7]/g,'\uFFFD');
+}
+
+let running=false,stopReq=false;
+let detCount=0,attackCount=0,benignCount=0,bcCount=0;
+let firstDet=true,firstBc=true;
+let listenInterval=null,listeningActive=false;
+const $=id=>document.getElementById(id);
+
+// PING
+$('btn-ping').onclick=async()=>{
+  const dot=$('conn-dot'),txt=$('conn-text');
+  dot.className='dot pend';txt.textContent='PINGING...';
+  try{
+    const res=await fetch($('api-url').value,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({features:new Array(72).fill(0)}),
+      signal:AbortSignal.timeout(5000)
+    });
+    await res.json();
+    dot.className='dot ok';txt.textContent='SERVER ONLINE';
+  }catch(e){
+    dot.className='dot err';
+    txt.textContent=e.name==='TimeoutError'?'TIMEOUT':'UNREACHABLE';
+  }
+};
+
+// FEATURE PANEL
+function renderFeatures(features,label,num){
+  const isAttack=label.toUpperCase()!=='BENIGN';
+  const vals=features.map(v=>Math.abs(parseFloat(v)||0));
+  const maxVal=Math.max(...vals,1);
+  const sev=SEVERITY_MAP[normLabel(label)]||'';
+
+  $('feat-info').innerHTML=
+    `<span style="color:var(--text2)">Sample</span> <span style="color:#fff;font-weight:700">#${num}</span>`+
+    `&nbsp;&nbsp;<span class="feat-label-tag ${isAttack?'attack':'benign'}">${label}</span>`+
+    (sev?`&nbsp;<span style="font-size:10px;color:var(--text3)">→ ${sev}</span>`:'');
+
+  const wrap=$('feature-grid-wrap');
+  wrap.innerHTML='';
+  const grid=document.createElement('div');
+  grid.className='feature-grid';
+
+  features.slice(0,72).forEach((val,i)=>{
+    const num=parseFloat(val);
+    const norm=Math.min(Math.log1p(Math.abs(num))/Math.log1p(maxVal),1);
+    const disp=Number.isInteger(num)?num:Math.abs(num)>=10000?num.toExponential(2):num.toFixed(3);
+    const hi=norm>0.72&&Math.abs(num)>0;
+    const barColor=isAttack
+      ?`linear-gradient(90deg,#ef4444,#f97316)`
+      :`linear-gradient(90deg,#3b82f6,#06b6d4)`;
+
+    const item=document.createElement('div');
+    item.className='feature-item';
+    item.title=`${FEATURE_NAMES[i]}: ${val}`;
+    item.innerHTML=
+      `<div class="feat-idx">#${i}</div>`+
+      `<div class="feat-name">${FEATURE_NAMES[i]}</div>`+
+      `<div class="feat-val${hi?' hi':''}">${disp}</div>`+
+      `<div class="feat-bar"><div class="feat-bar-inner" style="width:${(norm*100).toFixed(1)}%;background:${barColor}"></div></div>`;
+    grid.appendChild(item);
+  });
+  wrap.appendChild(grid);
+}
+
+
+
+// HELPERS
+function sevBadge(sev){
+  const s=(sev||'HIGH').toUpperCase();
+  const cls={CRITICAL:'sev-critical',HIGH:'sev-high',MEDIUM:'sev-medium',LOW:'sev-low',NONE:'sev-none'}[s]||'sev-high';
+  return `<span class="badge ${cls}">${s}</span>`;
+}
+function scoreWidget(prob){
+  const col=prob>0.7?'var(--red)':prob>0.35?'var(--amber)':'var(--green)';
+  return `<div class="score-wrap">
+    <div class="score-bg"><div class="score-fill" style="width:${(prob*100).toFixed(0)}%;background:${col}"></div></div>
+    <span class="score-num">${parseFloat(prob).toFixed(4)}</span></div>`;
+}
+function updateMetrics(){
+  $('m-total').textContent=detCount;
+  $('m-attacks').textContent=attackCount;
+  $('m-benign').textContent=benignCount;
+  $('m-bc').textContent=bcCount;
+  if(detCount>0){
+    $('m-attack-sub').textContent=`${((attackCount/detCount)*100).toFixed(1)}% of total`;
+    $('m-benign-sub').textContent=`${((benignCount/detCount)*100).toFixed(1)}% of total`;
+    $('m-total-sub').textContent=`${detCount} processed`;
+  }
+}
+function addDetRow(idx,label,result,score,conf){
+  const isAttack=result.includes('ATTACK');
+  const match=isAttack===(label.toUpperCase()!=='BENIGN');
+  const tbody=$('det-tbody');
+  if(firstDet){tbody.innerHTML='';firstDet=false;}
+  const tr=document.createElement('tr');
+  tr.className='row-new';
+  tr.innerHTML=
+    `<td style="color:var(--text3)">${idx}</td>`+
+    `<td><span class="attack-type">${label}</span></td>`+
+    `<td><span class="badge ${isAttack?'attack':'benign'}">${isAttack?'ATTACK':'BENIGN'}</span></td>`+
+    `<td>${scoreWidget(score)}</td>`+
+    `<td style="color:var(--text2)">${conf}</td>`+
+    `<td class="${match?'match-ok':'match-fail'}">${match?'✓':'✗'}</td>`;
+  tbody.insertBefore(tr,tbody.firstChild);
+}
+function addBcRow(idx,label,hash,severity){
+  const tbody=$('bc-tbody');
+  if(firstBc){tbody.innerHTML='';firstBc=false;}
+  const time=new Date().toLocaleTimeString();
+  const tr=document.createElement('tr');
+  tr.className='row-new';
+  tr.innerHTML=
+    `<td style="color:var(--text3)">${idx}</td>`+
+    `<td><span class="attack-type">${label}</span></td>`+
+    `<td>${sevBadge(severity)}</td>`+
+    `<td style="color:var(--text2)">${time}</td>`+
+    `<td class="hash-cell" title="Click to copy" onclick="navigator.clipboard.writeText('${hash}')">${hash}</td>`;
+  tbody.insertBefore(tr,tbody.firstChild);
+}
+
+// PROCESS a single sample received from remote device
+async function processSample(s){
+  if(stopReq)return;
+  const apiUrl=$('api-url').value;
+  const sampleLabel=s.attack_name||s.true_label||'UNKNOWN';
+  renderFeatures(s.features,sampleLabel,detCount+1);
+  try{
+    const res=await fetch(apiUrl,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({features:s.features,attack_name:sampleLabel}),
+      signal:AbortSignal.timeout(12000)
+    });
+    const d=await res.json();
+    if(d.status==='success'){
+      detCount++;
+      const isAttack=d.result.includes('ATTACK');
+      if(isAttack)attackCount++;else benignCount++;
+      addDetRow(detCount,sampleLabel,d.result,d.threat_score,d.confidence);
+      if(d.blockchain_ref){
+        bcCount++;
+        const sev=SEVERITY_MAP[normLabel(sampleLabel)]||d.severity||'HIGH';
+        addBcRow(bcCount,sampleLabel,d.blockchain_ref,sev);
+      }
+    }
+  }catch(e){
+    detCount++;
+    const tbody=$('det-tbody');
+    if(firstDet){tbody.innerHTML='';firstDet=false;}
+    const tr=document.createElement('tr');
+    tr.className='row-new';
+    tr.innerHTML=`<td>${detCount}</td><td colspan="5" style="color:var(--red);font-size:10px">${e.name==='TimeoutError'?'Timed out — check server is running':'Error: '+e.message}</td>`;
+    tbody.insertBefore(tr,tbody.firstChild);
+  }
+  updateMetrics();
+}
+
+// POLL Flask for samples pushed by remote device
+async function pollForSamples(){
+  const baseUrl=$('api-url').value.replace(/\/predict\/?$/,'');
+  try{
+    const res=await fetch(baseUrl+'/get_pending_samples',{
+      method:'GET',signal:AbortSignal.timeout(5000)
+    });
+    if(!res.ok)return;
+    const d=await res.json();
+    if(d.samples&&d.samples.length){
+      const prog=$('prog');
+      for(const s of d.samples){
+        if(stopReq)break;
+        prog.style.width='50%';
+        await processSample(s);
+        await new Promise(r=>setTimeout(r,parseInt($('delay-inp').value)||700));
+      }
+      prog.style.width='100%';
+      setTimeout(()=>{prog.style.width='0%';},1200);
+    }
+  }catch(e){
+    // server unreachable during poll — dot stays amber
+  }
+}
+
+// LISTEN controls
+$('btn-listen').onclick=()=>{
+  if(listeningActive)return;
+  listeningActive=true;stopReq=false;
+  $('btn-listen').disabled=true;
+  $('btn-listen-stop').disabled=false;
+  $('btn-stop').disabled=false;
+  $('live-dot').className='dot pend';
+  $('live-text').textContent='LISTENING...';
+  const interval=Math.max(500,parseInt($('poll-inp').value)||1500);
+  listenInterval=setInterval(pollForSamples,interval);
+  pollForSamples();
+  // Animate dot to OK after first successful ping attempt
+  setTimeout(async()=>{
+    const baseUrl=$('api-url').value.replace(/\/predict\/?$/,'');
+    try{
+      await fetch(baseUrl+'/get_pending_samples',{signal:AbortSignal.timeout(3000)});
+      $('live-dot').className='dot ok';
+      $('live-text').textContent='LIVE — WAITING FOR SAMPLES';
+    }catch(e){
+      $('live-dot').className='dot err';
+      $('live-text').textContent='CANNOT REACH FLASK SERVER';
+    }
+  },600);
+};
+
+$('btn-listen-stop').onclick=()=>{
+  stopReq=true;
+  listeningActive=false;
+  clearInterval(listenInterval);
+  $('btn-listen').disabled=false;
+  $('btn-listen-stop').disabled=true;
+  $('btn-stop').disabled=true;
+  $('live-dot').className='dot';
+  $('live-text').textContent='STOPPED';
+};
+
+$('btn-stop').onclick=()=>{stopReq=true;};
+</script>
+</body>
+</html>

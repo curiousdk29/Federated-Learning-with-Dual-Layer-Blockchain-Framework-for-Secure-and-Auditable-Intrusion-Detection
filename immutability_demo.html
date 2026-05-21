@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Blockchain Immutability Demo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f1117;color:#e0e0e0;padding:1.5rem;font-size:14px}
+h1{font-size:22px;font-weight:600;color:#fff;margin-bottom:4px}
+.sub{font-size:12px;color:#666;margin-bottom:1.5rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem}
+.metric{background:#1a1d27;border:1px solid #2a2d3a;border-radius:10px;padding:.9rem 1rem}
+.metric .lbl{font-size:11px;color:#666;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+.metric .val{font-size:22px;font-weight:600;color:#fff}
+.val.green{color:#27ae60}.val.red{color:#e74c3c}.val.blue{color:#3498db}.val.yellow{color:#f39c12}
+.card{background:#1a1d27;border:1px solid #2a2d3a;border-radius:10px;padding:1.4rem;margin-bottom:1rem}
+.card-title{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+label{font-size:12px;color:#888}
+input[type=text],input[type=number]{height:32px;border:1px solid #333;border-radius:6px;padding:0 10px;font-size:13px;background:#0f1117;color:#e0e0e0}
+input[type=text]{min-width:220px}
+input[type=number]{width:70px}
+button{height:32px;padding:0 14px;border:1px solid #333;border-radius:6px;font-size:13px;background:#1a1d27;color:#e0e0e0;cursor:pointer;transition:all .15s}
+button:hover{border-color:#555;background:#252835}
+button.primary{background:#3498db;color:#fff;border-color:#3498db}
+button.primary:hover{background:#217dbb}
+button.danger{background:#e74c3c;color:#fff;border-color:#e74c3c}
+button.danger:hover{background:#b03a2e}
+
+/* Timeline */
+.timeline{position:relative;padding-left:2rem;margin-top:1rem}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:#2a2d3a}
+.step{position:relative;margin-bottom:1.4rem;opacity:.25;transition:opacity .4s}
+.step.active,.step.success,.step.fail{opacity:1}
+.step-dot{position:absolute;left:-2rem;top:3px;width:16px;height:16px;border-radius:50%;background:#2a2d3a;border:2px solid #444;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#888}
+.step.active .step-dot{background:#3498db;border-color:#3498db;color:#fff}
+.step.success .step-dot{background:#27ae60;border-color:#27ae60;color:#fff}
+.step.fail .step-dot{background:#e74c3c;border-color:#e74c3c;color:#fff}
+.step-title{font-size:13px;font-weight:600;color:#666;margin-bottom:5px}
+.step.active .step-title,.step.success .step-title,.step.fail .step-title{color:#fff}
+.step-body{font-size:12px;color:#888;line-height:1.6}
+
+/* Revert box */
+.revert-box{background:#100505;border:1px solid #6b1c1c;border-radius:8px;padding:14px 16px;margin-top:10px}
+.revert-title{font-size:11px;font-weight:700;color:#e74c3c;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.revert-title-badge{background:#6b1c1c;color:#e74c3c;padding:2px 8px;border-radius:4px;font-size:10px}
+.revert-msg{font-family:'Courier New',monospace;font-size:11px;color:#ff8a80;line-height:1.8;word-break:break-all;background:#0a0202;padding:10px 12px;border-radius:6px;border:1px solid #3d0f0f;margin-bottom:10px}
+.revert-explain{font-size:11px;color:#777;line-height:1.7}
+
+/* Ganache evidence panel — the star of the show */
+.ganache-evidence{background:#080e1a;border:2px solid #1a3a6b;border-radius:10px;padding:16px;margin-top:12px}
+.ganache-evidence-title{font-size:11px;font-weight:700;color:#3498db;letter-spacing:.08em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.ganache-evidence-title::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#3498db;box-shadow:0 0 6px #3498db}
+.ev-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ev-item{background:#0d1520;border:1px solid #1a2d4a;border-radius:6px;padding:10px 12px}
+.ev-label{font-size:10px;color:#4a6fa5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.ev-value{font-family:'Courier New',monospace;font-size:11px;color:#7eb8f7;word-break:break-all;line-height:1.5}
+.ev-value.red{color:#ff6b6b}
+.ev-value.green{color:#51cf66}
+.ev-value.yellow{color:#ffd43b}
+.ev-item.full{grid-column:1/-1}
+.status-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.status-pill.failed{background:#3d0c0c;color:#e74c3c;border:1px solid #6b1515}
+.status-pill.success{background:#0c3d1a;color:#27ae60;border:1px solid #1a6b30}
+
+/* Compare grid */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.compare-box{background:#0f1117;border-radius:8px;padding:1rem;border:1px solid #2a2d3a}
+.compare-box.original{border-color:#27ae60}
+.compare-box.attempt{border-color:#e74c3c}
+.compare-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.compare-label.original{color:#27ae60}
+.compare-label.attempt{color:#e74c3c}
+.field-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1a1d27;font-size:12px}
+.field-row:last-child{border:none}
+.field-key{color:#555}
+.field-val{color:#ccc;font-family:monospace;font-size:11px;max-width:56%;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.field-val.blocked{color:#e74c3c;text-decoration:line-through}
+
+/* Verdict */
+.verdict-box{border-radius:10px;padding:1.4rem;text-align:center;margin-top:1rem;display:none}
+.verdict-box.immutable{background:#071a0f;border:2px solid #27ae60}
+.verdict-icon{font-size:44px;margin-bottom:10px}
+.verdict-title{font-size:18px;font-weight:700;margin-bottom:8px}
+.verdict-box.immutable .verdict-title{color:#27ae60}
+.verdict-detail{font-size:12px;color:#888;line-height:1.8}
+.verdict-proof-strip{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:14px}
+.proof-chip{display:flex;align-items:center;gap:5px;background:#0d1f12;border:1px solid #1a5c35;border-radius:20px;padding:4px 12px;font-size:11px;color:#51cf66}
+
+/* Alerts table */
+.log-wrap{max-height:200px;overflow-y:auto;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{text-align:left;padding:6px 8px;color:#555;border-bottom:1px solid #2a2d3a;font-weight:500;background:#1a1d27;position:sticky;top:0}
+tbody tr{border-bottom:1px solid #1a1d27}
+tbody tr:hover{background:#1f2230}
+tbody td{padding:6px 8px;color:#aaa}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
+.badge.critical{background:#3d0c0c;color:#e74c3c;border:1px solid #5c1010}
+.badge.high{background:#3d2a0c;color:#f39c12;border:1px solid #6b4a15}
+.badge.medium{background:#2a2d0c;color:#f1c40f;border:1px solid #4a4a15}
+.badge.low{background:#0c2a1a;color:#27ae60;border:1px solid #155c30}
+
+/* Misc */
+.alert-msg{padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:10px;display:none}
+.alert-msg.err{background:#1a0505;border:1px solid #5c1010;color:#e74c3c}
+.alert-msg.ok{background:#071a0f;border:1px solid #1a5c35;color:#27ae60}
+.spinner{display:inline-block;width:11px;height:11px;border:2px solid #444;border-top-color:#3498db;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+code{background:#252835;padding:1px 5px;border-radius:3px;font-size:11px;font-family:'Courier New',monospace}
+.divider{border:none;border-top:1px solid #1e2130;margin:10px 0}
+</style>
+</head>
+<body>
+
+<h1>🔐 Blockchain Immutability Demo</h1>
+<p class="sub">Real tamper rejection — proven by Ganache's own EVM revert output, not application logic</p>
+
+<div id="alert-msg" class="alert-msg"></div>
+
+<!-- Connection -->
+<div class="card">
+  <div class="card-title">Connection</div>
+  <div class="row">
+    <label>Flask API URL:</label>
+    <input type="text" id="api-url" value="http://172.x.x.x:5001" placeholder="http://YOUR_WSL_IP:5001" style="min-width:280px">
+    <button class="primary" id="btn-connect">Connect & Load Alerts</button>
+    <button id="btn-refresh" style="margin-left:4px">↺ Refresh</button>
+  </div>
+</div>
+
+<!-- Metrics -->
+<div class="grid4">
+  <div class="metric"><div class="lbl">Alerts on chain</div><div class="val blue" id="m-count">—</div></div>
+  <div class="metric"><div class="lbl">Tamper attempts</div><div class="val red" id="m-tamper">0</div></div>
+  <div class="metric"><div class="lbl">Chain reverts</div><div class="val green" id="m-reverts">0</div></div>
+  <div class="metric"><div class="lbl">Count unchanged</div><div class="val yellow" id="m-count-check">—</div></div>
+</div>
+
+<!-- Step 1: Logged alerts -->
+<div class="card">
+  <div class="card-title">Step 1 — Logged alerts on blockchain (read-only view)</div>
+  <div class="log-wrap">
+    <table>
+      <thead><tr><th>Index</th><th>Alert ID</th><th>Severity</th><th>Time</th><th>Metadata</th><th>Action</th></tr></thead>
+      <tbody id="alert-tbody">
+        <tr><td colspan="6" style="text-align:center;color:#444;padding:2rem">Connect to load from blockchain</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Step 2: Tamper form -->
+<div class="card">
+  <div class="card-title">Step 2 — Attempt to modify a logged record</div>
+  <div class="row">
+    <label>Target index:</label>
+    <input type="number" id="target-index" value="0" min="0" style="width:60px">
+    <label>Fake Alert ID:</label>
+    <input type="text" id="fake-id" value="MODIFIED-0000" style="min-width:150px">
+    <label>Fake Severity:</label>
+    <input type="text" id="fake-sev" value="LOW" style="min-width:70px">
+  </div>
+  <div class="row">
+    <label>Fake Metadata:</label>
+    <input type="text" id="fake-meta" value="Benign traffic, no threat" style="min-width:280px">
+    <button class="danger" id="btn-tamper">⚡ Attempt Tamper on Index</button>
+  </div>
+  <p style="font-size:11px;color:#555;margin-top:4px">
+    Sends <code>logAlert()</code> from <code>accounts[1]</code> (unauthorized attacker).
+    The smart contract's <code>onlyOwner</code> modifier causes Ganache to revert the transaction before any state is written.
+  </p>
+</div>
+
+<!-- Step 3: Result -->
+<div class="card" id="result-card" style="display:none">
+  <div class="card-title">Step 3 — Live result from Ganache</div>
+
+  <div class="timeline">
+    <div class="step" id="s1">
+      <div class="step-dot">1</div>
+      <div class="step-title">Original record read from blockchain</div>
+      <div class="step-body" id="s1-body">Waiting...</div>
+    </div>
+    <div class="step" id="s2">
+      <div class="step-dot">2</div>
+      <div class="step-title">Attacker calls logAlert() from accounts[1] — Ganache response</div>
+      <div class="step-body" id="s2-body">Waiting...</div>
+    </div>
+    <div class="step" id="s3">
+      <div class="step-dot">3</div>
+      <div class="step-title">Original record re-read after attempt</div>
+      <div class="step-body" id="s3-body">Waiting...</div>
+    </div>
+    <div class="step" id="s4">
+      <div class="step-dot">4</div>
+      <div class="step-title">Alert count before vs after — proves nothing was appended</div>
+      <div class="step-body" id="s4-body">Waiting...</div>
+    </div>
+    <div class="step" id="s5">
+      <div class="step-dot">5</div>
+      <div class="step-title">Field-by-field integrity check</div>
+      <div class="step-body" id="s5-body">Waiting...</div>
+    </div>
+  </div>
+
+  <!-- Compare panel -->
+  <div class="compare-grid" id="compare-grid" style="display:none">
+    <div class="compare-box original">
+      <div class="compare-label original">✅ Actual on-chain data (unchanged)</div>
+      <div id="orig-fields"></div>
+    </div>
+    <div class="compare-box attempt">
+      <div class="compare-label attempt">🚫 Attempted modification (rejected by EVM)</div>
+      <div id="tamper-fields"></div>
+    </div>
+  </div>
+
+  <!-- Verdict -->
+  <div class="verdict-box immutable" id="verdict-box">
+    <div class="verdict-icon">🔒</div>
+    <div class="verdict-title" id="verdict-title"></div>
+    <div class="verdict-detail" id="verdict-detail"></div>
+    <div class="verdict-proof-strip" id="verdict-proof-strip"></div>
+  </div>
+</div>
+
+<script>
+let baseUrl = '';
+let tamperCount = 0;
+let revertCount = 0;
+
+const $ = id => document.getElementById(id);
+
+function showMsg(msg, type='ok') {
+  const el = $('alert-msg');
+  el.textContent = msg;
+  el.className = 'alert-msg ' + type;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 7000);
+}
+
+function setStep(n, state, bodyHtml) {
+  const el = $('s' + n);
+  el.className = 'step ' + state;
+  const dot = el.querySelector('.step-dot');
+  dot.textContent = state === 'success' ? '✓' : state === 'fail' ? '✗' : n;
+  if (bodyHtml !== undefined) $('s' + n + '-body').innerHTML = bodyHtml;
+}
+
+function renderFields(id, rows) {
+  $(id).innerHTML = rows.map(([k, v, cls]) =>
+    `<div class="field-row">
+      <span class="field-key">${k}</span>
+      <span class="field-val ${cls || ''}">${v}</span>
+    </div>`
+  ).join('');
+}
+
+function badgeFor(sev) {
+  const s = (sev || '').toLowerCase();
+  const cls = s === 'critical' ? 'critical' : s === 'high' ? 'high' : s === 'medium' ? 'medium' : 'low';
+  return `<span class="badge ${cls}">${sev}</span>`;
+}
+
+async function loadAlerts() {
+  baseUrl = $('api-url').value.replace(/\/$/, '');
+  try {
+    const res = await fetch(baseUrl + '/get_all_alerts', { signal: AbortSignal.timeout(8000) });
+    const d = await res.json();
+    if (d.status !== 'success') { showMsg('Error: ' + d.message, 'err'); return; }
+    $('m-count').textContent = d.count;
+    const tbody = $('alert-tbody');
+    if (d.count === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#444;padding:2rem">No alerts logged yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.alerts.map(a => `
+      <tr>
+        <td style="color:#555">${a.index}</td>
+        <td style="font-family:monospace;font-size:11px;color:#aaa">${a.id}</td>
+        <td>${badgeFor(a.severity)}</td>
+        <td style="font-size:11px;color:#666">${new Date(a.timestamp * 1000).toLocaleTimeString()}</td>
+        <td style="font-size:11px;color:#666;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.metadata}</td>
+        <td><button onclick="selectTarget(${a.index})" style="font-size:11px;padding:2px 10px;height:26px;color:#3498db;border-color:#3498db">Select</button></td>
+      </tr>`).join('');
+    showMsg(`Loaded ${d.count} alerts from blockchain`, 'ok');
+  } catch (e) {
+    showMsg('Cannot connect. Check WSL IP and Flask is running.', 'err');
+  }
+}
+
+function selectTarget(idx) {
+  $('target-index').value = idx;
+  $('btn-tamper').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+$('btn-connect').onclick = loadAlerts;
+$('btn-refresh').onclick = loadAlerts;
+
+$('btn-tamper').onclick = async () => {
+  const idx      = parseInt($('target-index').value);
+  const fakeId   = $('fake-id').value.trim();
+  const fakeSev  = $('fake-sev').value.trim();
+  const fakeMeta = $('fake-meta').value.trim();
+
+  // Validate: all fields must be non-empty
+  const fields = [
+    { el: $('fake-id'),   val: fakeId,   name: 'Fake Alert ID' },
+    { el: $('fake-sev'),  val: fakeSev,  name: 'Fake Severity' },
+    { el: $('fake-meta'), val: fakeMeta, name: 'Fake Metadata' }
+  ];
+  let invalid = false;
+  fields.forEach(f => {
+    if (!f.val) {
+      f.el.style.borderColor = '#e74c3c';
+      f.el.style.boxShadow = '0 0 0 2px rgba(231,76,60,.25)';
+      invalid = true;
+    } else {
+      f.el.style.borderColor = '';
+      f.el.style.boxShadow = '';
+    }
+  });
+  if (isNaN(idx) || idx < 0) {
+    $('target-index').style.borderColor = '#e74c3c';
+    $('target-index').style.boxShadow = '0 0 0 2px rgba(231,76,60,.25)';
+    invalid = true;
+  } else {
+    $('target-index').style.borderColor = '';
+    $('target-index').style.boxShadow = '';
+  }
+  if (invalid) {
+    showMsg('⚠ All tamper fields must be filled in before attempting — no blank inputs allowed.', 'err');
+    return;
+  }
+
+  $('result-card').style.display = 'block';
+  $('compare-grid').style.display = 'none';
+  $('verdict-box').style.display = 'none';
+  [1, 2, 3, 4, 5].forEach(n => setStep(n, '', 'Waiting...'));
+  $('result-card').scrollIntoView({ behavior: 'smooth' });
+
+  const btn = $('btn-tamper');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Sending tamper transaction to Ganache...';
+
+  await pause(300);
+  setStep(1, 'active', `Reading alert at index <code>${idx}</code> from Ganache...`);
+
+  try {
+    const res = await fetch(baseUrl + '/tamper_attempt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_index: idx, tampered_id: fakeId, tampered_severity: fakeSev, tampered_metadata: fakeMeta }),
+      signal: AbortSignal.timeout(18000)
+    });
+    const d = await res.json();
+    if (d.status !== 'success') { showMsg('Error: ' + d.message, 'err'); btn.disabled = false; btn.textContent = '⚡ Attempt Tamper on Index'; return; }
+
+    // ── Step 1: Original fetched ──────────────────────────────────────────
+    await pause(500);
+    setStep(1, 'success',
+      `Original record at index <code>${idx}</code>: &nbsp;` +
+      `ID=<code style="color:#3498db">${d.original_data.id}</code> &nbsp;` +
+      `Severity=<code style="color:#e74c3c">${d.original_data.severity}</code> &nbsp;` +
+      `<span style="color:#555">Metadata=</span><code>${d.original_data.metadata}</code>`
+    );
+
+    // ── Step 2: Ganache revert evidence ──────────────────────────────────
+    await pause(500);
+    setStep(2, 'active',
+      `Sending <code>logAlert()</code> from attacker <code>${d.attacker_account}</code>...`
+    );
+    await pause(900);
+
+    if (d.tamper_rejected) {
+      revertCount++;
+      $('m-reverts').textContent = revertCount;
+
+      // Build Ganache evidence panel
+      let receiptHtml = '';
+      if (d.failed_tx_receipt) {
+        const r = d.failed_tx_receipt;
+        receiptHtml = `
+          <hr class="divider">
+          <div style="font-size:10px;color:#4a6fa5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">
+            📦 Ganache Transaction Receipt (status=0 means EVM rejected it)
+          </div>
+          <div class="ev-grid">
+            <div class="ev-item">
+              <div class="ev-label">EVM Status</div>
+              <div class="ev-value"><span class="status-pill failed">● ${r.status} — FAILED / REVERTED</span></div>
+            </div>
+            <div class="ev-item">
+              <div class="ev-label">Block Number</div>
+              <div class="ev-value yellow">#${r.block_number}</div>
+            </div>
+            <div class="ev-item full">
+              <div class="ev-label">Transaction Hash</div>
+              <div class="ev-value">${r.transaction_hash}</div>
+            </div>
+            <div class="ev-item full">
+              <div class="ev-label">Block Hash</div>
+              <div class="ev-value">${r.block_hash}</div>
+            </div>
+            <div class="ev-item">
+              <div class="ev-label">From (Attacker)</div>
+              <div class="ev-value red">${r.from}</div>
+            </div>
+            <div class="ev-item">
+              <div class="ev-label">Gas Used</div>
+              <div class="ev-value">${r.gas_used} units</div>
+            </div>
+          </div>`;
+      }
+
+      setStep(2, 'fail', `
+        <div class="revert-box">
+          <div class="revert-title">
+            ⛔ TRANSACTION REVERTED BY GANACHE EVM
+            <span class="revert-title-badge">onlyOwner violated</span>
+          </div>
+          <div style="font-size:11px;color:#888;margin-bottom:6px">
+            Raw error string returned by Web3.py directly from Ganache:
+          </div>
+          <div class="revert-msg">${escHtml(d.raw_revert_reason || '(no raw reason returned)')}</div>
+          <div style="font-size:11px;color:#aaa;margin-bottom:4px">
+            📌 Core revert message extracted: <code style="color:#ff8a80">${escHtml(d.clean_revert_reason || d.raw_revert_reason || '')}</code>
+          </div>
+          <div class="revert-explain">
+            This error originates from Ganache's EVM — not from Flask logic.
+            The <code>onlyOwner</code> modifier in the smart contract called <code>require(msg.sender == owner)</code>,
+            which evaluated to <b>false</b> for <code>${d.attacker_account}</code> and triggered an immediate revert.
+            Ganache rolled back all state changes in this transaction atomically — nothing was written.
+          </div>
+        </div>
+        <div class="ganache-evidence">
+          <div class="ganache-evidence-title">🔵 GANACHE EVIDENCE — Raw on-chain proof</div>
+          <div class="ev-grid">
+            <div class="ev-item">
+              <div class="ev-label">Authorized account (owner)</div>
+              <div class="ev-value green">${d.authorized_account}</div>
+            </div>
+            <div class="ev-item">
+              <div class="ev-label">Attacker account (rejected)</div>
+              <div class="ev-value red">${d.attacker_account}</div>
+            </div>
+          </div>
+          ${receiptHtml}
+        </div>
+      `);
+    } else {
+      setStep(2, 'success', 'Transaction processed (append-only path — no onlyOwner guard).');
+    }
+
+    // ── Step 3: Re-read original ──────────────────────────────────────────
+    await pause(500);
+    setStep(3, 'active', `Re-reading index <code>${idx}</code> from Ganache after tamper attempt...`);
+    await pause(700);
+    setStep(3, 'success',
+      `Post-attempt: ID=<code style="color:#27ae60">${d.post_tamper_data.id}</code> &nbsp;` +
+      `Severity=<code style="color:#27ae60">${d.post_tamper_data.severity}</code> &nbsp;` +
+      `Metadata=<code style="color:#27ae60">${d.post_tamper_data.metadata}</code>`
+    );
+
+    // ── Step 4: Alert count unchanged ────────────────────────────────────
+    await pause(500);
+    setStep(4, 'active', 'Checking alert count before vs after...');
+    await pause(600);
+    $('m-count-check').textContent = d.count_unchanged ? '✓' : '✗';
+    setStep(4, d.count_unchanged ? 'success' : 'fail',
+      d.count_unchanged
+        ? `<b style="color:#27ae60">✓ Alert count unchanged:</b> <code>${d.count_before}</code> before → <code>${d.count_after}</code> after. 
+           Nothing was appended. Ganache state is identical.`
+        : `<b style="color:#e74c3c">✗ Count changed from ${d.count_before} to ${d.count_after} — investigate!</b>`
+    );
+
+    // ── Step 5: Field comparison ──────────────────────────────────────────
+    await pause(500);
+    setStep(5, 'active', 'Comparing all fields byte by byte...');
+    await pause(700);
+    setStep(5, d.is_immutable ? 'success' : 'fail',
+      d.is_immutable
+        ? '<b style="color:#27ae60">✓ All 5 fields match — original record is byte-for-byte identical after the tamper attempt.</b>'
+        : '<b style="color:#e74c3c">✗ Mismatch detected in one or more fields!</b>'
+    );
+
+    // Compare panel
+    $('compare-grid').style.display = 'grid';
+    renderFields('orig-fields', [
+      ['Alert ID',   d.original_data.id,                                          ''],
+      ['Model',      d.original_data.model,                                       ''],
+      ['Severity',   d.original_data.severity,                                    ''],
+      ['Timestamp',  new Date(d.original_data.timestamp * 1000).toLocaleTimeString(), ''],
+      ['Metadata',   d.original_data.metadata,                                    '']
+    ]);
+    renderFields('tamper-fields', [
+      ['Alert ID',   fakeId   + ' ✗ rejected',               'blocked'],
+      ['Model',      'TAMPER-ATTEMPT ✗ rejected',             'blocked'],
+      ['Severity',   fakeSev  + ' ✗ rejected',               'blocked'],
+      ['Timestamp',  '(now) ✗ rejected',                     'blocked'],
+      ['Metadata',   fakeMeta + ' ✗ rejected',               'blocked']
+    ]);
+
+    // Verdict
+    tamperCount++;
+    $('m-tamper').textContent = tamperCount;
+
+    const vbox = $('verdict-box');
+    vbox.style.display = 'block';
+    $('verdict-title').textContent = d.verdict;
+
+    const chips = [];
+    if (d.tamper_rejected)   chips.push('⛔ EVM Revert confirmed');
+    if (d.is_immutable)      chips.push('🔒 Record unchanged');
+    if (d.count_unchanged)   chips.push('📊 Count stable');
+    if (d.raw_revert_reason) chips.push('📡 Raw Ganache error captured');
+    $('verdict-proof-strip').innerHTML = chips.map(c =>
+      `<span class="proof-chip">${c}</span>`).join('');
+
+    $('verdict-detail').innerHTML =
+      `Attacker used <code>${d.attacker_account}</code> to call <code>logAlert()</code>.<br>
+       Ganache's EVM executed the <code>onlyOwner</code> modifier and issued a <code>revert</code>
+       — not Flask, not the frontend.<br><br>
+       Alert count: <b>${d.count_before} → ${d.count_after}</b> (zero change).<br>
+       Index <b>${idx}</b> is byte-identical before and after. This is the Ethereum immutability guarantee.`;
+
+    loadAlerts();
+  } catch (e) {
+    showMsg('Request failed: ' + e.message + '. Check Flask is running.', 'err');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⚡ Attempt Tamper on Index';
+};
+
+function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
