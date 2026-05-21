@@ -7,8 +7,11 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.fernet import Fernet
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
 # --- CONFIGURATION (Match your Aggregator/Node settings) ---
-RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com"
+RPC_URL = os.getenv("RPC_URL")
 PRIVATE_KEY_PATH = "credentials/aggregator_private.pem"
 # Path to your CID or fetch it from blockchain
 WITH_BLOCKCHAIN = True 

@@ -11,7 +11,9 @@ from sklearn.metrics import classification_report, accuracy_score
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.fernet import Fernet
+from dotenv import load_dotenv
 
+load_dotenv()
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # --- 1. GLOBAL CONFIG ---
@@ -21,7 +23,8 @@ PUBLIC_KEY_PATH = "credentials/aggregator_public.pem"
 PRIVATE_KEY_PATH = "credentials/aggregator_private.pem"
 
 # Blockchain Config
-RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com"
+RPC_URL = os.getenv("RPC_URL")
+
 w3 = Web3(Web3.HTTPProvider(RPC_URL))
 
 with open("credentials/deployed_address.txt", "r") as f:

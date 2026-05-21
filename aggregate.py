@@ -4,15 +4,18 @@ import numpy as np
 import io
 import hashlib
 from web3 import Web3
+from dotenv import load_dotenv
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.fernet import Fernet
 
+
+load_dotenv()
 # --- 1. CONFIGURATION ---
-PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJkNTU4ZjE0My01YTc2LTRjNGYtOGUwYi03YzMyMTIxMTFmOTciLCJlbWFpbCI6ImFkaXRoeWEyOTA2QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI0YTI4MmZkZWFlZmFlOTU4MjA4MCIsInNjb3BlZEtleVNlY3JldCI6ImQ4ZThjMGI5MjlhNjU5ZDhiNjRhMjhiYTlkOTYwOTA2MzQ1OGI1OGQ5OGMxNzk2ZGQ2YjNjNmQxYjM0YjhiOWIiLCJleHAiOjE4MDI0MDk2MzN9.e9s4cNtR3PmkPc0dbJI6IN2n9TVhIzqhUwvEGmULBQM"
-RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com"
-PRIVATE_KEY = "0xf65dec826d6bc9e1cb002bc453b246694618f889f8f00942c3a8a842b6fe5b59"
-MY_ADDRESS = "0xbfA514c7C631CA73FE52e1962AA4C9C5D593E1AF"
+PINATA_JWT = os.getenv("PINATA_JWT")
+RPC_URL = os.getenv("RPC_URL")
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+MY_ADDRESS = os.getenv("MY_ADDRESS")
 PUBLIC_KEY_PATH = "credentials/aggregator_public.pem"
 PRIVATE_KEY_PATH = "credentials/aggregator_private.pem"
 

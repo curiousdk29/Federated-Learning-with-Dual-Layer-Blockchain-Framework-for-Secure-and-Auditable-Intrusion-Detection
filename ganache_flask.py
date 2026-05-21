@@ -2,6 +2,7 @@ import io
 import time
 import json
 import requests
+import os
 import numpy as np
 import tensorflow as tf
 from flask import Flask, request, jsonify
@@ -10,9 +11,10 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.fernet import Fernet
 from collections import deque
+from dotenv import load_dotenv
 import threading
 
-
+load_dotenv()
 
 app = Flask(__name__)
 from flask_cors import CORS
@@ -22,13 +24,12 @@ _sample_queue = deque()
 _queue_lock = threading.Lock()
 # --- 1. CONFIGURATION ---
 PRIVATE_KEY_PATH = "credentials/aggregator_private.pem"
-GLOBAL_MODEL_CID = "0x5b1869D9A4C187F2EAa108f3062412ecf0526b24"
 G_MIN, G_MAX = 0.0, 1000000.0
 
 # --- 2. BLOCKCHAIN CONFIGURATION (GANACHE) ---
 GANACHE_URL = "http://127.0.0.1:8545" 
 # REPLACE THIS with the address you get after deploying in Remix/Truffle
-CONTRACT_ADDRESS = "0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab"
+CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
 CONTRACT_ABI = [
 	{
 		"inputs": [],
@@ -224,42 +225,7 @@ SEVERITY_MAP = {
     "WEB ATTACK - SQL INJECTION":"HIGH",
     "WEB ATTACK - XSS":          "MEDIUM",
 }
-'''
-# --- 3. DECRYPTION & LOADING ---
-def load_encrypted_model(cid):
-    print(f"📥 Fetching Global Model from IPFS: {cid}")
-    res = requests.get(f"https://gateway.pinata.cloud/ipfs/{cid}")
-    data = res.content
 
-    with open(PRIVATE_KEY_PATH, "rb") as kf:
-        private_key = serialization.load_pem_private_key(kf.read(), password=None)
-
-    key_len = int.from_bytes(data[:4], byteorder='big')
-    enc_aes_key = data[4 : 4 + key_len]
-    enc_weights = data[4 + key_len :]
-
-    aes_key = private_key.decrypt(
-        enc_aes_key,
-        padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
-    )
-    cipher_suite = Fernet(aes_key)
-    weights_bytes = cipher_suite.decrypt(enc_weights)
-    weights = np.load(io.BytesIO(weights_bytes), allow_pickle=True)
-
-    model = tf.keras.Sequential([
-        tf.keras.layers.Input(shape=(9, 8, 1)),
-        tf.keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Flatten(),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
-    model.set_weights(weights)
-    return model
-'''
 print("🚀 Initializing IDS Server...")
 ids_model = tf.keras.models.load_model("final_ids_model_2.h5")
 

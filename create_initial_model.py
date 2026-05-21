@@ -6,10 +6,15 @@ import requests
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.fernet import Fernet
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # --- 1. CONFIGURATION ---
 # Use the JWT from your Pinata account
-PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJkNTU4ZjE0My01YTc2LTRjNGYtOGUwYi03YzMyMTIxMTFmOTciLCJlbWFpbCI6ImFkaXRoeWEyOTA2QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI0YTI4MmZkZWFlZmFlOTU4MjA4MCIsInNjb3BlZEtleVNlY3JldCI6ImQ4ZThjMGI5MjlhNjU5ZDhiNjRhMjhiYTlkOTYwOTA2MzQ1OGI1OGQ5OGMxNzk2ZGQ2YjNjNmQxYjM0YjhiOWIiLCJleHAiOjE4MDI0MDk2MzN9.e9s4cNtR3PmkPc0dbJI6IN2n9TVhIzqhUwvEGmULBQM"
+PINATA_JWT = os.getenv("PINATA_JWT")
 PUBLIC_KEY_PATH = "credentials/aggregator_public.pem"
 
 # --- 2. ARCHITECTURE ---

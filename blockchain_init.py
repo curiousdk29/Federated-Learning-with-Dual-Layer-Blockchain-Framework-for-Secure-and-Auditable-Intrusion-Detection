@@ -1,10 +1,14 @@
 import json
 from web3 import Web3
+from dotenv import load_dotenv
 
+
+
+load_dotenv()
 # 1. SETUP
-RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com"
-PRIVATE_KEY = "0xf65dec826d6bc9e1cb002bc453b246694618f889f8f00942c3a8a842b6fe5b59"
-MY_ADDRESS = "0xbfA514c7C631CA73FE52e1962AA4C9C5D593E1AF"
+RPC_URL = os.getenv("RPC_URL")
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+MY_ADDRESS = os.getenv("MY_ADDRESS")
 
 # 2. LOAD DEPLOYED INFO
 with open("credentials/deployed_address.txt", "r") as f:

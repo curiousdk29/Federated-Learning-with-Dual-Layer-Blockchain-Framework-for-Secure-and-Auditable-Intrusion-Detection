@@ -4,3 +4,4 @@
 # Security: Ignore private keys and credentials folder
 *.pem
 credentials/
+.env
